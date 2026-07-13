@@ -1,0 +1,31 @@
+{
+    "name": "debezium",
+    "config": {
+        "plugin.name": "pgoutput",
+        "tasks.max": "5",
+        "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+        "database.hostname": "postgres",
+        "database.port": "5432",
+        "database.user": "debezium",
+        "database.password": "${env:PASSWORD_DEB}",
+        "database.dbname": "${env:POSTGRES_DB}",
+        "topic.prefix": "debezium",
+		"topic.creation.enable": "true",
+        "topic.creation.default.partitions": 1,
+        "topic.creation.default.replication.factor": "1",
+        "topic.creation.default.retention.ms": "172800000",
+        "topic.creation.default.segment.bytes": "1073741824",
+        "table.include.list": "base_data.debezium_heartbeat,base_data.chat,base_data.user",
+        "snapshot.mode": "initial",
+        "publish_via_partition_root": "true",
+        "publication.autocreate.mode": "disabled",
+        "publication.name": "dbz_publication",
+        "slot.name": "dbz_slot",
+        "max.queue.size": "50000",
+        "max.batch.size": "5000",
+        "poll.interval.ms": "50",
+        "heartbeat.interval.ms": 5000,
+        "heartbeat.action.query": "UPDATE base_data.debezium_heartbeat SET ts=clock_timestamp();",
+        "offset.mismatch.strategy": "fail"
+    }
+}

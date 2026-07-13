@@ -1,0 +1,46 @@
+name: Reactor CI
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'services/reactor/**'
+  pull_request:
+    paths:
+      - 'services/reactor/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: services/reactor
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Grant permission
+        run: chmod +x gradlew
+
+      - name: Run tests
+        run: ./gradlew :app:test
+
+      - name: Build
+        run: ./gradlew :app:clean :app:build -x test
+
+      - name: Build Docker image
+        run: docker build -t torin-reactor:latest .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: reactor-build
+          path: services/reactor/app/build/libs/*.jar

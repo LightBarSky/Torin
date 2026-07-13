@@ -1,0 +1,2 @@
+com.torin.es.autoconfigure.ElasticsearchAutoconfiguration
+com.torin.es.autoconfigure.EsPortsAutoconfiguration

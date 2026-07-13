@@ -1,0 +1,119 @@
+HELP.md
+.env
+*.env
+!.example.env
+application-local.properties
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### OS Files ###
+.DS_Store
+
+
+######## Services ############
+# Sessions
+**/AppData/sessions/*
+!**/AppData/sessions/.gitkeep
+
+# Access hashes
+**/AppData/AccessHashes/*
+!**/AppData/AccessHashes/.gitkeep
+
+# Certificates
+**/certs/*
+!**/certs/.gitkeep
+
+######## Infra ############
+**/data/
+**/logstash/state/
+**/backup/
+**/grafana/plugins/
+grafana.db
+
+# =========================
+# BUILD OUTPUT
+# =========================
+bin/
+obj/
+out/
+publish/
+
+# =========================
+# USER SECRETS / CONFIG
+# =========================
+appsettings.Development.json
+appsettings.Local.json
+secrets.json
+.env
+
+# ASP.NET Core user secrets (Visual Studio)
+**/Properties/launchSettings.json
+
+# =========================
+# VISUAL STUDIO
+# =========================
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# =========================
+# RUNTIME / LOGS
+# =========================
+*.log
+*.tmp
+Logs/
+
+# =========================
+# DOTNET TOOLS
+# =========================
+.dotnet/
+tools/
+
+# =========================
+# OS FILES
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# RIDER / INTELLIJ
+# =========================
+.idea/
+*.iml
+
+# =========================
+# VS CODE
+# =========================
+.vscode/

@@ -1,0 +1,245 @@
+services:
+  postgres:
+    platform: linux/amd64
+    build:
+      context: .
+      dockerfile: ./infra/postgres/Dockerfile
+    container_name: postgres
+    restart: unless-stopped
+    environment:
+      TZ: UTC
+      PGTZ: UTC
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PASSWORD_DEB: ${PASSWORD_DEB}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./infra/postgres/data:/var/lib/postgresql/data
+      - ./infra/postgres/config/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./infra/postgres/config/pg_hba.conf:/etc/postgresql/pg_hba.conf
+      - ./infra/postgres/pgbackrest/data:/var/lib/pg_back
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+      - -c
+      - hba_file=/etc/postgresql/pg_hba.conf
+    networks:
+      - backend
+  
+  kafka:
+    image: confluentinc/cp-kafka:7.8.0
+    hostname: kafka
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:9093'
+      KAFKA_LISTENERS: 'INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093'
+      KAFKA_ADVERTISED_LISTENERS: 'INTERNAL://kafka:29092,EXTERNAL://localhost:9092'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'INTERNAL'
+      CLUSTER_ID: 'EmptNWtoR4GGWx-BH6nGLQ'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    volumes:
+      - ./infra/kafka/data:/var/lib/kafka/data
+    networks:
+      - backend
+  
+  kafka-init:
+    image: confluentinc/cp-kafka:7.8.0
+    container_name: kafka-init
+    depends_on:
+      - kafka
+    volumes:
+      - ./infra/kafka/init/init.sh:/init.sh
+    entrypoint: ["/bin/bash", "/init.sh"]
+    networks:
+     - backend
+  
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    depends_on:
+      - kafka
+    networks:
+      - backend
+  
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.1.5
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - path.repo=/usr/share/elasticsearch/backup
+    ports:
+      - "9200:9200"
+    volumes:
+      - ./infra/elasticsearch/data:/usr/share/elasticsearch/data
+      - ./infra/elasticsearch/backup:/usr/share/elasticsearch/backup
+    networks:
+      - backend
+  
+  es-init:
+    image: curlimages/curl:latest
+    container_name: es-init
+    depends_on:
+      - elasticsearch
+    volumes:
+      - ./infra/elasticsearch/init:/init
+    entrypoint: ["/bin/sh", "/init/init.sh"]
+    networks:
+      - backend
+  
+  kibana:
+    image: docker.elastic.co/kibana/kibana:9.1.5
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - XPACK_SECURITY_ENABLED=false
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - backend
+  
+  kafka-connect:
+    build:
+      context: .
+      dockerfile: ./infra/kafka-connect/Dockerfile
+    container_name: kafka-connect
+    hostname: kafka-connect
+    ports:
+      - "8083:8083"
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: kafka:29092
+      CONNECT_REST_PORT: 8083
+      CONNECT_GROUP_ID: kafka-connect-group
+
+      CONNECT_CONFIG_STORAGE_TOPIC: _connect_configs
+      CONNECT_OFFSET_STORAGE_TOPIC: _connect_offsets
+      CONNECT_STATUS_STORAGE_TOPIC: _connect_status
+
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+
+      CONNECT_KEY_CONVERTER_SCHEMAS_ENABLE: "false"
+      CONNECT_VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+
+      CONNECT_INTERNAL_KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      CONNECT_INTERNAL_VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+
+      CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components
+
+      CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect
+
+      PASSWORD_DEB: ${PASSWORD_DEB}
+      POSTGRES_DB: ${POSTGRES_DB}
+      CONNECT_CONFIG_PROVIDERS: "env"
+      CONNECT_CONFIG_PROVIDERS_ENV_CLASS: "org.apache.kafka.common.config.provider.EnvVarConfigProvider"
+    command:
+      - bash
+      - -c
+      - |
+        echo "Waiting for Kafka..."
+        cub kafka-ready -b kafka:29092 1 60
+
+        echo "Starting Kafka Connect..."
+        /etc/confluent/docker/run
+    networks:
+      - backend
+
+  kafka-connect-init:
+    image: confluentinc/cp-kafka-connect:7.8.0
+    container_name: kafka-connect-init
+    depends_on:
+      - kafka-connect
+    volumes:
+      - ./infra/kafka-connect/connectors:/connectors
+      - ./infra/kafka-connect/init:/init
+    entrypoint: ["/bin/sh", "/init/init.sh"]
+    networks:
+      - backend
+  
+  logstash:
+    build:
+      context: .
+      dockerfile: ./infra/logstash/Dockerfile
+    container_name: logstash
+    depends_on:
+      kafka:
+        condition: service_started
+
+      elasticsearch:
+        condition: service_started
+
+      kafka-init:
+        condition: service_completed_successfully
+
+      es-init:
+        condition: service_completed_successfully
+    environment:
+      LS_JAVA_OPTS: "-Xmx512m -Xms512m"
+      JDBC_USER: ${POSTGRES_USER}
+      JDBC_PASSWORD: ${POSTGRES_PASSWORD}
+      JDBC_DB: ${POSTGRES_DB}
+    volumes:
+      - ./infra/logstash/pipeline:/usr/share/logstash/pipeline
+      - ./infra/logstash/pipelines.yml:/usr/share/logstash/config/pipelines.yml
+      - ./infra/logstash/logstash.yml:/usr/share/logstash/config/logstash.yml
+      - ./infra/logstash/state:/usr/share/logstash/state
+    ports:
+      - "5044:5044"
+    networks:
+      - backend
+  
+  grafana:
+    container_name: grafana
+    build:
+      context: ./infra/grafana
+      dockerfile: Dockerfile
+    ports:
+      - 3000:3000
+    volumes:
+      - ./infra/grafana:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GF_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_PASSWORD}
+    networks:
+      - backend
+  
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    ports:
+      - 9090:9090
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./infra/prometheus/data:/prometheus/data
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--web.enable-otlp-receiver"
+    networks:
+      - backend
+  
+networks:
+  backend:
+    name: backend

@@ -1,0 +1,2 @@
+com.torin.postgres.autoconfigure.PostgresAutoConfiguration
+com.torin.postgres.autoconfigure.PostgresPortsAutoConfiguration

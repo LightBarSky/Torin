@@ -1,0 +1,59 @@
+ {
+    "index_patterns": [
+      "logs_handlers-*"
+    ],
+    "template": {
+      "settings": {
+        "index": {
+          "lifecycle": {
+            "name": "logs_handlers_policy",
+            "rollover_alias": "logs_handlers_write"
+          }
+        },
+        "refresh_interval": "5s",
+        "number_of_shards": "1",
+        "translog": {
+          "flush_threshold_size": "2gb",
+          "sync_interval": "10s",
+          "durability": "async"
+        },
+        "merge": {
+          "scheduler": {
+            "max_thread_count": "1"
+          },
+          "policy": {
+            "max_merged_segment": "10gb"
+          }
+        },
+        "max_result_window": "50000",
+        "number_of_replicas": "0"
+      },
+      "aliases": {
+        "logs_handlers_read": {}
+      },
+      "mappings": {
+        "properties": {
+          "handler_id": {
+            "type": "keyword"
+          },
+          "level": {
+            "type": "keyword"
+          },
+          "formatter_timestamp": {
+            "type": "keyword"
+          },
+          "message": {
+            "type": "text"
+          },
+          "timestamp": {
+            "format": "strict_date_optional_time||yyyy-MM-dd HH:mm:ss||epoch_millis",
+            "index": true,
+            "ignore_malformed": false,
+            "store": false,
+            "type": "date",
+            "doc_values": true
+          }
+        }
+      }
+    }
+  }

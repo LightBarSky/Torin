@@ -1,0 +1,46 @@
+name: Prod CI
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'services/prod/**'
+  pull_request:
+    paths:
+      - 'services/prod/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: services/prod
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Grant permission
+        run: chmod +x mvnw
+
+      - name: Run tests
+        run: ./mvnw test
+
+      - name: Build
+        run: ./mvnw clean package -DskipTests
+
+      - name: Build Docker image
+        run: docker build -t torin-prod:latest .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: prod-build
+          path: services/prod/target/*.jar

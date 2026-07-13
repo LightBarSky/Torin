@@ -1,0 +1,87 @@
+{
+    "index_patterns": [
+        "messages-*"
+    ],
+    "template": {
+        "settings": {
+            "index": {
+                "lifecycle": {
+                    "name": "delete_90d_policy"
+                },
+                "refresh_interval": "60s",
+                "number_of_shards": "1",
+                "translog": {
+                    "flush_threshold_size": "2gb",
+                    "sync_interval": "10s",
+                    "durability": "async"
+                },
+                "merge": {
+                    "scheduler": {
+                        "max_thread_count": "1"
+                    },
+                    "policy": {
+                        "max_merged_segment": "10gb"
+                    }
+                },
+                "max_result_window": "50000",
+                "analysis": {
+                    "analyzer": {
+                        "reverse_analyzer": {
+                            "filter": [
+                                "reverse"
+                            ],
+                            "tokenizer": "standard"
+                        }
+                    }
+                },
+                "number_of_replicas": "0"
+            }
+        },
+        "aliases": {
+            "messages_read": {}
+        },
+        "mappings": {
+            "dynamic": "strict",
+            "properties": {
+                "date": {
+                    "format": "strict_date_optional_time||yyyy-MM-dd HH:mm:ss||epoch_millis",
+                    "type": "date"
+                },
+                "is_comments": {
+                    "type": "keyword"
+                },
+                "reply_to_post": {
+                    "type": "long"
+                },
+                "id_message": {
+                    "type": "long"
+                },
+                "content_text": {
+                    "analyzer": "standard",
+                    "type": "text",
+                    "fields": {
+                        "reversed": {
+                            "analyzer": "reverse_analyzer",
+                            "type": "text"
+                        }
+                    }
+                },
+                "id_grouped_message": {
+                    "type": "keyword"
+                },
+                "id": {
+                    "type": "long"
+                },
+                "id_user": {
+                    "type": "keyword"
+                },
+                "id_reply": {
+                    "type": "long"
+                },
+                "id_group": {
+                    "type": "keyword"
+                }
+            }
+        }
+    }
+}

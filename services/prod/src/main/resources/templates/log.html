@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title id="title_handler" th:text="${title}"></title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
+    <style>
+        body {
+            font-family: monospace, monospace;
+            margin: 20px;
+            background-color: #fafafa;
+            color: #222;
+        }
+
+        h2 {
+            margin-bottom: 15px;
+            color: #444;
+        }
+
+        #logContainer {
+            height: 90vh;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            background: #fff;
+            padding: 10px;
+            position: relative;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .log-entry {
+            padding: 2px 4px;
+            white-space: pre-wrap;
+            border-left: 3px solid transparent;
+            transition: background 0.2s;
+        }
+
+        .log-entry:hover {
+            background: #f2f2f2;
+        }
+
+        .log-error {
+            color: #b71c1c;
+            border-left-color: #b71c1c;
+            font-weight: bold;
+        }
+
+        .log-info {
+            color: #1565c0;
+            border-left-color: #1565c0;
+        }
+
+        .log-warning {
+            color: #e7b100;
+            border-left-color: #e7b100;
+        }
+
+        .log-fatal {
+            color: #9e00e7;
+            border-left-color: #9e00e7;
+        }
+
+        .divider {
+            text-align: center;
+            margin: 15px 0;
+            color: #555;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            background: #fff;
+            padding: 5px 0;
+            border-top: 1px dashed #aaa;
+            border-bottom: 1px dashed #aaa;
+        }
+
+        .spinner {
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .spinner::after {
+            content: "";
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            border: 3px solid #999;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h2 th:text="'Logs [handlerId = ' + ${handlerId} + ', filter = ' + ${filter} + ']'"></h2>
+    <div id="logContainer">
+        <div class="spinner" id="spinner"></div>
+    </div>
+
+    <script th:inline="javascript">
+        const handlerId = /*[[${handlerId}]]*/ null;
+        const filter = /*[[${filter}]]*/ null;
+        const maxLogs = 100;
+        const logContainer = document.getElementById('logContainer');
+        const logs = [];
+        const oldBuffer = []; // временное хранилище старых логов
+        let newLogsCount = 0;
+        let dividerInserted = false;
+
+        const params = new URLSearchParams();
+        
+        if (handlerId != null) {
+            params.append('handlerId', handlerId);
+        }
+
+        if (filter != null) {
+            params.append('filter', filter);
+        }
+
+        const source = new EventSource(`/api/v1/logs?${params.toString()}`);
+
+        function appendLogElement(element) {
+            logContainer.appendChild(element);
+            logs.push(element);
+            trimLogs();
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function prependLogsBatch(elements) {
+            elements.forEach(el => {
+                logContainer.insertBefore(el, logContainer.firstChild);
+                logs.unshift(el);
+            });
+            trimLogs();
+        }
+
+        function trimLogs() {
+            while (logs.length > maxLogs) {
+                const old = logs.shift();
+                if (old && old.parentElement) old.remove();
+            }
+        }
+
+        function createLogHTML(log) {
+            const div = document.createElement("div");
+            div.className = "log-entry";
+            div.textContent = `${log.formatter_timestamp} | ${log.handler_id} | ${log.level} | ${log.message}`;
+            if (log.level === "Error") div.classList.add("log-error");
+            else if (log.level === "Info") div.classList.add("log-info");
+            else if (log.level === "Warning") div.classList.add("log-warning");
+            else if (log.level === "FatalError") div.classList.add("log-fatal");
+            return div;
+        }
+
+        source.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            //console.log(data);
+            if (data.mode === 2) {
+                if (!dividerInserted) {
+                    const divider = document.createElement("div");
+                    divider.className = "divider";
+                    divider.textContent = "New logs";
+                    logContainer.appendChild(divider);
+                    logs.push(divider);
+
+                    dividerInserted = true;
+                }
+                const el = createLogHTML(data);
+                appendLogElement(el);
+                newLogsCount++;
+            }
+            else if (data.mode === 1) {
+                document.getElementById("spinner")?.remove();
+                prependLogsBatch(oldBuffer.reverse());
+                oldBuffer.length = 0;
+            }
+            else if (data.mode === 0) {
+                const el = createLogHTML(data);
+                oldBuffer.push(el);
+                while (oldBuffer.length > maxLogs) {
+                    const old = oldBuffer.shift();
+                    if (old && old.parentElement) old.remove();
+                }
+            }
+        };
+
+        source.onerror = () => {
+            console.error('The log stream has stopped');
+        };
+
+        window.addEventListener('beforeunload', () => {
+            source.close();
+        });
+    </script>
+</body>
+
+</html>

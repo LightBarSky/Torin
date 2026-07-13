@@ -1,0 +1,14 @@
+package com.torin.prod.dto;
+
+import java.util.List;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class NotificationsIdsDto {
+    private List<Long> ids;
+}

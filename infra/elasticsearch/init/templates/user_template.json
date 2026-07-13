@@ -1,0 +1,118 @@
+{
+    "index_patterns": [
+        "user-*"
+    ],
+    "template": {
+        "settings": {
+            "index": {
+                "lifecycle": {
+                    "name": "user_policy",
+                    "rollover_alias": "user_write"
+                },
+                "refresh_interval": "60s",
+                "number_of_shards": "1",
+                "translog": {
+                    "flush_threshold_size": "2gb",
+                    "sync_interval": "10s",
+                    "durability": "async"
+                },
+                "merge": {
+                    "scheduler": {
+                        "max_thread_count": "1"
+                    },
+                    "policy": {
+                        "max_merged_segment": "10gb"
+                    }
+                },
+                "max_result_window": "50000",
+                "number_of_replicas": "0"
+            },
+            "analysis": {
+                "normalizer": {
+                    "lowercase_normalyzer": {
+                        "type": "custom",
+                        "filter": [
+                            "lowercase"
+                        ]
+                    }
+                }
+            }
+        },
+        "aliases": {
+            "user_read": {}
+        },
+        "mappings": {
+            "dynamic": "strict",
+            "properties": {
+                "updated_at": {
+                    "format": "strict_date_optional_time||yyyy-MM-dd HH:mm:ss||epoch_millis",
+                    "type": "date"
+                },
+                "id": {
+                    "type": "long"
+                },
+                "id_user": {
+                    "type": "keyword"
+                },
+                "username": {
+                    "type": "keyword",
+                    "normalizer": "lowercase_normalyzer"
+                },
+                "number": {
+                    "type": "keyword"
+                },
+                "first_name": {
+                    "type": "text"
+                },
+                "last_name": {
+                    "type": "text"
+                },
+                "pg_tags": {
+                    "type": "text"
+                },
+                "is_geo": {
+                    "type": "boolean"
+                },
+                "is_bot": {
+                    "type": "boolean"
+                },
+                "birthday": {
+                    "type": "text"
+                },
+                "flags": {
+                    "type": "text"
+                },
+                "flags2": {
+                    "type": "text"
+                },
+                "flags_full": {
+                    "type": "text"
+                },
+                "flags2_full": {
+                    "type": "text"
+                },
+                "about": {
+                    "type": "text"
+                },
+                "bot_info": {
+                    "type": "text"
+                },
+                "personal_channel_id": {
+                    "type": "keyword"
+                },
+                "location_address": {
+                    "type": "text"
+                },
+                "location": {
+                    "type": "geo_point"
+                },
+                "location_radius": {
+                    "type": "integer"
+                },
+                "version": {
+                    "type": "long"
+                }
+            }
+        }
+    }
+}

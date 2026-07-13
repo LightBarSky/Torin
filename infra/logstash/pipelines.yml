@@ -1,0 +1,35 @@
+- pipeline.id: pipeline_logs
+  path.config: /usr/share/logstash/pipeline/logs_handlers_to_es.conf
+
+#- pipeline.id: pipeline_messages
+#  path.config: /usr/share/logstash/pipeline/messages_to_es.conf
+
+- pipeline.id: pipeline_reactions
+  path.config: /usr/share/logstash/pipeline/reactions_to_es.conf
+
+- pipeline.id: pipeline_debezium_chat
+  path.config: /usr/share/logstash/pipeline/debezium_chat_to_es.conf
+
+#- pipeline.id: pipeline_chat
+#  path.config: /usr/share/logstash/pipeline/chat_to_es.conf
+
+- pipeline.id: pipeline_debezium_user
+  path.config: /usr/share/logstash/pipeline/debezium_user_to_es.conf
+
+#- pipeline.id: pipeline_user
+#  path.config: /usr/share/logstash/pipeline/user_to_es.conf
+
+- pipeline.id: pipeline_reactions_general
+  path.config: /usr/share/logstash/pipeline/reactions_general_to_es.conf
+
+- pipeline.id: pipeline_gifts
+  path.config: /usr/share/logstash/pipeline/gifts_to_es.conf
+
+- pipeline.id: pipeline_messages_propertiesl
+  path.config: /usr/share/logstash/pipeline/messages_properties_to_es.conf
+
+- pipeline.id: pipeline_messages_entities
+  path.config: /usr/share/logstash/pipeline/messages_entities_to_es.conf
+
+- pipeline.id: pipeline_participant_changed
+  path.config: /usr/share/logstash/pipeline/participant_changed_to_es.conf

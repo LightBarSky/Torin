@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Torin</title>
+    <link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/status.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+</head>
+
+<body style="padding-top: 60px;">
+
+    <header>
+        <nav
+            class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3 fixed-top">
+            <div class="container-fluid">
+                <a class="navbar-brand" th:href="@{/}">Torin</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse"
+                    aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
+                    <ul class="navbar-nav flex-grow-1">
+                        <li class="nav-item">
+                            <button type="button" class="btn text-dark" data-bs-toggle="modal"
+                                onclick="openHandlerModal()">
+                                Add handler
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button type="button" class="btn text-dark" data-bs-toggle="modal"
+                                onclick="openSessionModal()">
+                                Create session
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button type="button" class="btn text-dark"
+                                onclick="runAll()">
+                                Run all
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button type="button" class="btn text-dark"
+                                onclick="stopAll()">
+                                Stop all
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button type="button" class="btn text-dark"
+                                onclick="openLogTabFilter('error')">
+                                Error filter
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div class="container">
+        <main role="main" class="pb-3">
+            <button id="scrollToTopBtn" title="Up">&#8679;</button>
+            <div class="container py-4">
+
+                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+
+                    <div class="stats-container" style="margin: 0 0 5px 0;">
+                        <div id="spinnerListener" class="position-absolute bottom-0 end-0 p-2" style="display: none;">
+                            <div class="spinner-border text-light" role="status" style="width: 1.0rem; height: 1.0rem;">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                        <table class="stats-table">
+                            <tr>
+                                <td>
+                                    <strong>Status:</strong>
+                                    <span id="runningListener" class="status"
+                                        th:classappend="${dbService && runningListener} ? ' connected' : ' disconnected' "></span>
+                                </td>
+                                <td>
+                                    <button id="startListener" onClick="startListener()"
+                                        class="btn btn-outline-light btn-sm"
+                                        th:disabled="${!dbService || runningListener}">Run</button>
+                                </td>
+                                <td>
+                                    <button id="stopListener" onClick="stopListener()"
+                                        class="btn btn-outline-light btn-sm"
+                                        th:disabled="${!dbService || !runningListener}">Stop</button>
+                                </td>
+                                <td>
+                                    <button th:data-key="${keyForLogsListener}" onclick="openLogTab(this)"
+                                        class="btn btn-outline-light btn-sm">Show logs</button>
+                                </td>
+                                <td>
+                                    <div class="tooltip-container">
+                                        <button id="hoverTarget" class="btn btn-icon">
+                                            <i class="bi bi-gear"></i>
+                                        </button>
+
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="stats-container">
+                        <table class="stats-table">
+                            <tr>
+                                <td>
+                                    <span class="status connected"></span>
+                                    <strong>Active:</strong>
+                                    <span id="runningHandlers" th:text="${runningCount}+ '/' + ${handlersCount}"></span>
+                                </td>
+                                <td>
+                                    <strong>⚙️ API_DB:</strong>
+                                    <span class="status unknow" data-status-id="dbService"></span>
+                                </td>
+                                <td>
+                                    <strong>📦 API_Telegram:</strong>
+                                    <span class="status unknow" data-status-id="TelegramApiService"></span>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <div class="notification-wrapper position-relative" style="padding-left: 20px;">
+                        <button id="notificationBtn" class="btn-icon position-relative">
+                            <i class="bi bi-bell"></i>
+                            <span id="notificationCount"
+                                class="badge bg-danger position-absolute top-0 start-100 translate-middle">0</span>
+                        </button>
+
+                        <div id="notificationDropdown" class="card position-absolute shadow"
+                            style="top: 2.5rem; right: 0; width: 300px; max-height: 400px; overflow-y: auto; display: none;">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <span>Notifications</span>
+                                <button id="clearNotifications" class="btn btn-sm btn-outline-light">Clear</button>
+                            </div>
+                            <ul id="notificationList" class="list-group list-group-flush"></ul>
+                        </div>
+                    </div>
+
+                </div>
+
+
+                <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4" style="padding-top: 20px;">
+                    <div class="col" th:each="handler : ${handlers}" th:id="'handler_' + ${handler.id}">
+                        <div class="card handler-card border-0 h-100">
+                            <div class="card-body d-flex flex-column">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div>
+                                        <h5 class="mb-1 fw-semibold" th:text="${handler.nameHandler}">HandlerName</h5>
+                                        <div class="text-white-60">ID: <span th:text="${handler.id}"></span></div>
+                                    </div>
+
+                                    <div class="handler-block d-flex flex-column align-items-end">
+                                        <div class="d-flex align-items-center mb-2">
+                                            <div class="d-flex align-items-center gap-1">
+                                                <div class="warning-wrapper position-relative d-inline-block">
+                                                    <i id="'warning-icon-' + ${handler.id}"
+                                                        class="bi bi-exclamation-triangle-fill text-warning fs-5"
+                                                        style="cursor: pointer;" 
+                                                        th:styleappend="${handler.warning} != null ? 'display: inline;' : 'display: none;'"></i>
+                                                    </i>
+                                                    <div id="'warningBox_' + ${handler.id}"
+                                                        class="tooltip-box">
+                                                        <span th:text="${handler.warning}"></span>
+                                                    </div>
+                                                </div>
+
+                                                <span th:id="'status_' + ${handler.id}" class="status-badge"
+                                                    th:data-handler-id="${handler.id}" th:text="${handler.status}">
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <button th:id="'showLogs_' + ${handler.id}" class="btn btn-outline-light btn-sm"
+                                            th:data-key="${handler.id}" onclick="openLogTab(this)">Show
+                                            logs</button>
+                                    </div>
+                                </div>
+
+                                <div class="mb-3">
+                                    <div class="text-muted small" th:id="'error_block_stat_' + ${handler.id}">Last
+                                        error:</div>
+                                    <div class="text-danger" th:id="'error_stat_' + ${handler.id}"></div>
+                                </div>
+
+                                <div class="d-flex justify-content-start gap-3 mb-3">
+                                    <button th:id="'start_' + ${handler.id}" class="btn btn-icon" title="Run"
+                                        th:onclick="'startHandler(' + ${handler.id} + ')'">
+                                        <i class="bi bi-play-fill"></i>
+                                    </button>
+                                    <button th:id="'stop_' + ${handler.id}" class="btn btn-icon" title="Stop"
+                                        th:onclick="'stopHandler(' + ${handler.id} + ')'" disabled>
+                                        <i class="bi bi-stop-fill"></i>
+                                    </button>
+                                    <button th:id="'setting_' + ${handler.id}" class="btn btn-icon" title="Settings"
+                                        th:onclick="'editHandler(' + ${handler.id} + ')'">
+                                        <i class="bi bi-gear"></i>
+                                    </button>
+                                    <button th:id="'delete_' + ${handler.id}" class="btn btn-icon text-danger"
+                                        title="Delete" th:onclick="'deleteHandler(' + ${handler.id} + ')'">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+
+                                <div th:id="'spinner_' + ${handler.id}" class="position-absolute bottom-0 end-0 p-3"
+                                    style="display: none;">
+                                    <div class="spinner-border text-light" role="status"
+                                        style="width: 1.0rem; height: 1.0rem;">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                </div>
+
+                                <details>
+                                    <summary class="text-primary small">Details</summary>
+                                    <div class="mt-2 text-secondary small text-break" th:text="${handler.hash}"></div>
+                                </details>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <footer class="border-top footer text-muted">
+        <div class="container">
+            &copy; 2026 - Torin - <a>Privacy</a>
+        </div>
+    </footer>
+
+    <div class="modal fade" id="HandlerModal" tabindex="-1" aria-labelledby="HandlerLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content bg-dark text-white">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="HandlerLabel"></h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="HandlerForm">
+                        <input type="hidden" id="id_handler" name="id" value="null" />
+                        <div class="mb-3">
+                            <label for="select_category" class="form-label">Select a task</label>
+                            <select class="form-select" id="select_category" name="category" required>
+                                <option value="">-- Select --</option>
+                                <option value="ParseGroup">Parsing groups</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="Name" class="form-label">Name handler</label>
+                            <input type="text" class="form-control" id="Name" name="nameHandler" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="api_id" class="form-label">API_ID</label>
+                            <input type="text" class="form-control" id="api_id" name="apiId" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="hash" class="form-label">Hash</label>
+                            <input type="text" class="form-control" id="hash" name="hash" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="select_session" class="form-label">Select a session</label>
+                            <select class="form-select" id="select_session" name="phone" required>
+                                <option value="">-- Select --</option>
+                            </select>
+                        </div>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input toggle-input" type="checkbox" id="enableDirInputMedia"
+                                data-target="#dirInputBlockMedia" data-required="#DirectoryForMedia">
+                            <label class="form-check-label" for="enableDirInputMedia">Enable media collection</label>
+                        </div>
+                        <div class="mb-3" id="dirInputBlockMedia" style="display: none;">
+                            <label for="DirectoryForMedia" class="form-label">Path to the directory of media</label>
+                            <input type="text" class="form-control" id="DirectoryForMedia" name="directoryForMedia">
+                        </div>
+
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input toggle-input" type="checkbox" id="enableDirInputPhoto"
+                                data-target="#dirInputBlockPhoto" data-required="#DirectoryForPhoto">
+                            <label class="form-check-label" for="enableDirInputPhoto">Enable photo collection</label>
+                        </div>
+                        <div class="mb-3" id="dirInputBlockPhoto" style="display: none;">
+                            <label for="DirectoryForPhoto" class="form-label">Path to the directory of photo</label>
+                            <input type="text" class="form-control" id="DirectoryForPhoto" name="directoryForUserPhoto">
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-success">Save</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="SessionModal" tabindex="-1" aria-labelledby="SessionLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content bg-dark text-white">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="SessionLabel"></h5>
+                    <button type="button" onclick="stopAvt()" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                        aria-label="Закрыть"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="SessionForm">
+                        <div class="mb-3">
+                            <label for="api_id" class="form-label">API_ID</label>
+                            <input type="text" class="form-control" id="api_id" name="ApiId" value="29079291" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="hash" class="form-label">Hash</label>
+                            <input type="text" class="form-control" id="hash" name="Hash"
+                                value="059c251562ee855257c04568d13ad286" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="phoneNumber" class="form-label">Phone</label>
+                            <input type="text" class="form-control" id="phoneNumber" name="PhoneNumber" required>
+                        </div>
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input toggle-input" type="checkbox" name="WithQR"
+                                id="enableForQRCode">
+                            <label class="form-check-label" for="enableForQRCode">Log in via QR code</label>
+                        </div>
+                        <div class="mb-3" id="logInfoQRCode" style="display: none;">
+
+                        </div>
+
+                        <div class="mb-3" id="inputContainer" style="display: none;">
+                            <label for="input_value" id="input_label" class="form-label"></label>
+                            <input type="text" class="form-control" id="input_value" name="Input">
+                            <button type="button" class="btn btn-primary mt-2" id="sendInput">Send</button>
+                        </div>
+
+                        <div class="modal-footer">
+                            <div id="spinner" class="position-absolute bottom-0 start-0 p-3" style="display: none;">
+                                <div class="spinner-border text-light" role="status"
+                                    style="width: 1.5rem; height: 1.5rem;">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                            <button type="button" onclick="stopAvt()" class="btn btn-secondary"
+                                data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" id="button_start" class="btn btn-success">Start</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs/lib/stomp.min.js"></script>
+    <script src="lib/jquery/dist/jquery.min.js"></script>
+    <script src="lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/handlersControl.js"></script>
+    <script src="/js/notification.js"></script>
+    <script src="/js/sessionCreate.js"></script>
+    <script src="/js/otherFunc.js"></script>
+    <script src="/js/listenerControl.js"></script>
+
+    <div id="tooltipBox" class="tooltip-box">
+        Users: <span id="userListener"></span><br>
+        Chats: <span id="chatListener"></span><br>
+        AdminChats: <span id="adminChatsListener"></span><br>
+        Gifts: <span id="giftsListener"></span><br>
+        Reactions: <span id="reactionsListener"></span><br>
+        ReactionsGeneral: <span id="reactionsGeneralListener"></span><br>
+        Messages: <span id="messagesListener"></span><br>
+        MessagesProp: <span id="messagesPropListener"></span><br>
+        MessagesEntet: <span id="messagesEntetListener"></span><br>
+        TaskChats: <span id="taskChatsListener"></span><br>
+        WordGroupAll: <span id="wordGroupAllListener"></span>
+    </div>
+</body>
+
+</html>

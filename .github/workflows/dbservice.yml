@@ -1,0 +1,46 @@
+name: DBService CI
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'services/dbservice/**'
+  pull_request:
+    paths:
+      - 'services/dbservice/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: services/dbservice
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Grant permission
+        run: chmod +x mvnw
+
+      - name: Run tests
+        run: ./mvnw test
+
+      - name: Build
+        run: ./mvnw clean package -DskipTests
+
+      - name: Build Docker image
+        run: docker build -t torin-dbservice:latest .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dbservice-build
+          path: services/dbservice/target/*.jar

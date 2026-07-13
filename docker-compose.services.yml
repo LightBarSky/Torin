@@ -1,0 +1,67 @@
+services:
+  prod:
+    build:
+      context: ./services/prod
+      dockerfile: Dockerfile
+    container_name: prod
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      JAVA_TOOL_OPTIONS: "-Xms512m -Xmx2g"
+    ports:
+      - "${PORT_PROD_SERVICE}:5002"
+    networks:
+      - backend
+
+  dbservice:
+    build: 
+      context: ./services/dbservice
+      dockerfile: Dockerfile
+    container_name: dbservice
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      JAVA_TOOL_OPTIONS: "-Xms512m -Xmx4g"
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${PORT_DB_SERVICE}:5001"
+    networks:
+      - backend
+  
+  reactor:
+    build: 
+      context: ./services/reactor
+      dockerfile: Dockerfile
+    container_name: reactor
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      JAVA_TOOL_OPTIONS: "-Xms512m -Xmx4g"
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${PORT_REACTOR_SERVICE}:5003"
+    networks:
+      - backend
+
+  telegramservice:
+    build: 
+      context: ./services/telegramservice
+      dockerfile: Dockerfile
+    container_name: telegramservice
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://0.0.0.0:5000
+      dbService__BaseUrl: http://dbservice:5001
+      guiService__BaseUrl: http://prod:5002
+      metrics__EndPoint: http://prometheus:9090/api/v1/otlp/v1/metrics
+    volumes:
+      - ./services/telegramservice/Torin.Api/AppData:/app/AppData
+    ports:
+      - "${PORT_TELEGRAM_SERVICE}:5000"
+    networks:
+      - backend
+
+networks:
+  backend:
+    name: backend
