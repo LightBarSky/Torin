@@ -32,10 +32,6 @@ The system currently operates with **189 concurrently running Telegram parsers**
 
 > These values represent the current operating scale of the system and are not synthetic benchmark results.
 
-## Architecture
-
-The platform is built around asynchronous communication between services using Apache Kafka.
-
 ## System design
 
 ![Architecture](docs/architecture.png)
@@ -205,6 +201,6 @@ Future improvements include:
 
 - Detailed performance benchmarks
 - Load testing results
-- Parser throughput metrics
+- DLQ Kafka
 - Kafka consumer lag analysis
 - Extended observability dashboards
