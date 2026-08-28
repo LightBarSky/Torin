@@ -9,8 +9,6 @@
 
 > Distributed event-driven platform for collecting, processing, and analyzing Telegram data at scale.
 
-![Architecture](docs/architecture.png)
-
 ## Overview
 
 Torin is a microservice-based Telegram analytics platform built around an event-driven architecture.
@@ -37,6 +35,10 @@ The system currently operates with **189 concurrently running Telegram parsers**
 ## Architecture
 
 The platform is built around asynchronous communication between services using Apache Kafka.
+
+## System design
+
+![Architecture](docs/architecture.png)
 
 ### Services
 
@@ -181,7 +183,6 @@ docker compose \
   -f docker-compose.services.yml \
   down
 ```
-
 
 ## Observability
 
